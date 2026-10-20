@@ -1,809 +1,583 @@
 package com.example.connecta.presentation.updatescreen
 
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import coil.compose.rememberAsyncImagePainter
 import com.example.connecta.R
+import com.example.connecta.models.StatusUpdate
+import com.example.connecta.presentation.bottomnavigation.BottomNavigationBar
+import com.example.connecta.presentation.viewmodel.UpdateViewModel
 import kotlinx.coroutines.delay
+import java.text.SimpleDateFormat
+import java.util.*
 
 private val ConnectaTeal = Color(0xFF06B6D4)
 private val ConnectaDarkText = Color(0xFF102A32)
 private val ConnectaSecondaryText = Color(0xFF607D86)
 
-data class UpdateUser(
-    val name: String,
-    val time: String,
-    val image: Int
-)
-
-@Preview(
-    showSystemUi = true,
-    showBackground = true
-)
 @Composable
 fun UpdateScreen(
-    onStatusClick: (UpdateUser) -> Unit = {},
     onCameraClick: () -> Unit = {},
-    onSearchClick: () -> Unit = {},
     onMenuClick: () -> Unit = {},
     onChatsClick: () -> Unit = {},
     onPostClick: () -> Unit = {},
-    onCallsClick: () -> Unit = {}
+    onCallsClick: () -> Unit = {},
+    viewModel: UpdateViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
+    val updates by viewModel.updates.collectAsState()
+    val isSubmitting by viewModel.isSubmitting.collectAsState()
+    val currentUserId = viewModel.currentUserId ?: ""
 
+    var isSearching by remember { mutableStateOf(false) }
+    var searchText by remember { mutableStateOf("") }
+    var showCreateDialog by remember { mutableStateOf(false) }
+    var selectedStatusForViewing by remember { mutableStateOf<StatusUpdate?>(null) }
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
 
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
 
-    var isSearching by remember {
-        mutableStateOf(false)
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        selectedImageUri = uri
+        if (uri != null) {
+            showCreateDialog = true
+        }
     }
-
-    var searchText by remember {
-        mutableStateOf("")
-    }
-
-    val focusRequester = remember {
-        FocusRequester()
-    }
-
-    val keyboardController =
-        LocalSoftwareKeyboardController.current
-
 
     LaunchedEffect(isSearching) {
-
         if (isSearching) {
-
             delay(200)
-
             focusRequester.requestFocus()
-
             keyboardController?.show()
-
         } else {
-
             keyboardController?.hide()
         }
     }
 
+    val myUpdates = updates.filter { it.userId == currentUserId }
+    val otherUpdates = updates.filter { it.userId != currentUserId }
 
-    val recentUpdates = listOf(
+    val recentUpdates = otherUpdates.filter { !it.viewerIds.contains(currentUserId) }
+    val viewedUpdates = otherUpdates.filter { it.viewerIds.contains(currentUserId) }
 
-        UpdateUser(
-            name = "Ananya Sharma",
-            time = "Just now",
-            image = R.drawable.nodp
-        ),
+    val filteredRecent = if (searchText.isBlank()) recentUpdates else recentUpdates.filter {
+        it.userName.contains(searchText, ignoreCase = true)
+    }
 
-        UpdateUser(
-            name = "Rohan Verma",
-            time = "10 minutes ago",
-            image = R.drawable.nodp
-        ),
-
-        UpdateUser(
-            name = "Neha Patil",
-            time = "25 minutes ago",
-            image = R.drawable.nodp
-        ),
-
-        UpdateUser(
-            name = "Travel Diaries",
-            time = "Today, 8:45 AM",
-            image = R.drawable.nodp
-        ),
-
-        UpdateUser(
-            name = "Friends Forever",
-            time = "Today, 7:30 AM",
-            image = R.drawable.nodp
-        ),
-
-        UpdateUser(
-            name = "College Updates",
-            time = "Today, 6:15 AM",
-            image = R.drawable.nodp
-        )
-    )
-
-
-
-    val viewedUpdates = listOf(
-
-        UpdateUser(
-            name = "Aditya Kulkarni",
-            time = "Today, 5:40 AM",
-            image = R.drawable.nodp
-        ),
-
-        UpdateUser(
-            name = "Priya",
-            time = "Today, 5:20 AM",
-            image = R.drawable.nodp
-        ),
-
-        UpdateUser(
-            name = "Rahul",
-            time = "Today, 4:50 AM",
-            image = R.drawable.nodp
-        ),
-
-        UpdateUser(
-            name = "Karan",
-            time = "Today, 4:10 AM",
-            image = R.drawable.nodp
-        )
-    )
-
-
-    val filteredRecentUpdates =
-        if (searchText.isBlank()) {
-
-            recentUpdates
-
-        } else {
-
-            recentUpdates.filter { update ->
-
-                update.name.contains(
-                    searchText,
-                    ignoreCase = true
-                )
-            }
-        }
-
-
-    val filteredViewedUpdates =
-        if (searchText.isBlank()) {
-
-            viewedUpdates
-
-        } else {
-
-            viewedUpdates.filter { update ->
-
-                update.name.contains(
-                    searchText,
-                    ignoreCase = true
-                )
-            }
-        }
-
+    val filteredViewed = if (searchText.isBlank()) viewedUpdates else viewedUpdates.filter {
+        it.userName.contains(searchText, ignoreCase = true)
+    }
 
     Scaffold(
-
-
         topBar = {
-
             if (isSearching) {
-
-
                 Row(
-
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(70.dp)
-                        .padding(
-                            horizontal = 16.dp,
-                            vertical = 8.dp
-                        ),
-
-                    verticalAlignment =
-                        Alignment.CenterVertically
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-
                     TextField(
-
                         value = searchText,
-
-                        onValueChange = { text ->
-
-                            searchText = text
-                        },
-
+                        onValueChange = { searchText = it },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .focusRequester(
-                                focusRequester
-                            ),
-
+                            .focusRequester(focusRequester),
                         singleLine = true,
-
-                        placeholder = {
-
-                            Text(
-                                text = "Search updates"
-                            )
-                        },
-
+                        placeholder = { Text(text = "Search updates") },
                         leadingIcon = {
-
                             Icon(
-
-                                painter = painterResource(
-                                    id = R.drawable.search
-                                ),
-
-                                contentDescription =
-                                    "Search",
-
-                                modifier =
-                                    Modifier.size(24.dp),
-
+                                painter = painterResource(id = R.drawable.search),
+                                contentDescription = "Search",
+                                modifier = Modifier.size(24.dp),
                                 tint = ConnectaTeal
                             )
                         },
-
                         trailingIcon = {
-
                             Icon(
-
-                                imageVector =
-                                    Icons.Default.Close,
-
-                                contentDescription =
-                                    "Close search",
-
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close search",
                                 modifier = Modifier
                                     .size(24.dp)
                                     .clickable {
-
-                                        // Clear search
                                         searchText = ""
-
-                                        // Close search
                                         isSearching = false
                                     },
-
-                                tint =
-                                    ConnectaSecondaryText
+                                tint = ConnectaSecondaryText
                             )
                         },
-
-                        keyboardOptions =
-                            KeyboardOptions(
-                                imeAction =
-                                    ImeAction.Search
-                            ),
-
-                        shape =
-                            RoundedCornerShape(14.dp),
-
-                        colors =
-                            TextFieldDefaults.colors(
-
-                                focusedContainerColor =
-                                    Color(0xFFF1F5F6),
-
-                                unfocusedContainerColor =
-                                    Color(0xFFF1F5F6),
-
-                                disabledContainerColor =
-                                    Color(0xFFF1F5F6),
-
-                                focusedIndicatorColor =
-                                    Color.Transparent,
-
-                                unfocusedIndicatorColor =
-                                    Color.Transparent,
-
-                                disabledIndicatorColor =
-                                    Color.Transparent
-                            )
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color(0xFFF1F5F6),
+                            unfocusedContainerColor = Color(0xFFF1F5F6),
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent
+                        )
                     )
                 }
-
             } else {
-
-
                 UpdateTopBar(
-
-                    onCameraClick =
-                        onCameraClick,
-
-                    onSearchClick = {
-
-
-
-                        isSearching = true
-                    },
-
-                    onMenuClick =
-                        onMenuClick
+                    onCameraClick = { imagePickerLauncher.launch("image/*") },
+                    onSearchClick = { isSearching = true },
+                    onMenuClick = onMenuClick
                 )
             }
         },
-
-
-
         floatingActionButton = {
-
             FloatingActionButton(
-
-                onClick = {
-
-                },
-
-                containerColor =
-                    ConnectaTeal,
-
-                contentColor =
-                    Color.White
+                onClick = { imagePickerLauncher.launch("image/*") },
+                containerColor = ConnectaTeal,
+                contentColor = Color.White
             ) {
-
                 Icon(
-
-                    painter = painterResource(
-                        id = R.drawable.camera
-                    ),
-
-                    contentDescription =
-                        "Create update",
-
-                    modifier =
-                        Modifier.size(32.dp)
+                    painter = painterResource(id = R.drawable.camera),
+                    contentDescription = "Create update",
+                    modifier = Modifier.size(30.dp)
                 )
             }
         },
-
-
         bottomBar = {
-
-            UpdateBottomBar(
-
-                onChatsClick =
-                    onChatsClick,
-
-                onPostClick =
-                    onPostClick,
-
-                onCallsClick =
-                    onCallsClick
+            BottomNavigationBar(
+                selectedItem = 1,
+                onChatsClick = onChatsClick,
+                onUpdatesClick = {},
+                onPostsClick = onPostClick,
+                onCallsClick = onCallsClick
             )
         }
-
     ) { paddingValues ->
-
-
-
         LazyColumn(
-
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.White)
                 .padding(paddingValues)
                 .padding(horizontal = 20.dp),
-
-            contentPadding =
-                PaddingValues(
-                    top = 10.dp,
-                    bottom = 120.dp
-                ),
-
-            userScrollEnabled = true
+            contentPadding = PaddingValues(top = 10.dp, bottom = 120.dp)
         ) {
-
-
             item {
-
                 Text(
-
                     text = "Updates",
-
                     fontSize = 26.sp,
-
-                    fontWeight =
-                        FontWeight.Bold,
-
-                    color =
-                        ConnectaDarkText
+                    fontWeight = FontWeight.Bold,
+                    color = ConnectaDarkText
                 )
 
-                Spacer(
-                    modifier =
-                        Modifier.height(20.dp)
-                )
+                Spacer(modifier = Modifier.height(20.dp))
 
                 Text(
-
                     text = "Status",
-
                     fontSize = 18.sp,
-
-                    fontWeight =
-                        FontWeight.Bold,
-
-                    color =
-                        ConnectaTeal
+                    fontWeight = FontWeight.Bold,
+                    color = ConnectaTeal
                 )
 
-                Spacer(
-                    modifier =
-                        Modifier.height(12.dp)
-                )
+                Spacer(modifier = Modifier.height(14.dp))
 
-
-
+                // My Status
                 if (searchText.isBlank()) {
-
-                    StatusItem(
-
-                        name = "My status",
-
-                        time =
-                            "Tap to add status update",
-
-                        imageRes =
-                            R.drawable.nodp,
-
-                        viewed = false,
-
-                        onClick = {
-                            // Open status creator later
-                        }
-                    )
-
-                    Spacer(
-                        modifier =
-                            Modifier.height(28.dp)
-                    )
-                }
-
-
-                if (filteredRecentUpdates.isNotEmpty()) {
-
-                    Text(
-
-                        text =
-                            "Recent updates",
-
-                        fontSize = 19.sp,
-
-                        fontWeight =
-                            FontWeight.SemiBold,
-
-                        color =
-                            ConnectaSecondaryText
-                    )
-
-                    Spacer(
-                        modifier =
-                            Modifier.height(15.dp)
-                    )
-                }
-            }
-
-
-            items(filteredRecentUpdates) { update ->
-
-                StatusItem(
-
-                    name =
-                        update.name,
-
-                    time =
-                        update.time,
-
-                    imageRes =
-                        update.image,
-
-                    viewed = false,
-
-                    onClick = {
-
-                        onStatusClick(update)
-                    }
-                )
-
-                Spacer(
-                    modifier =
-                        Modifier.height(17.dp)
-                )
-            }
-
-
-
-            item {
-
-                if (filteredViewedUpdates.isNotEmpty()) {
-
-                    Spacer(
-                        modifier =
-                            Modifier.height(15.dp)
-                    )
-
-                    Text(
-
-                        text =
-                            "Viewed updates",
-
-                        fontSize = 19.sp,
-
-                        fontWeight =
-                            FontWeight.SemiBold,
-
-                        color =
-                            ConnectaSecondaryText
-                    )
-
-                    Spacer(
-                        modifier =
-                            Modifier.height(15.dp)
-                    )
-                }
-            }
-
-
-            items(filteredViewedUpdates) { update ->
-
-                StatusItem(
-
-                    name =
-                        update.name,
-
-                    time =
-                        update.time,
-
-                    imageRes =
-                        update.image,
-
-                    viewed = true,
-
-                    onClick = {
-
-                        onStatusClick(update)
-                    }
-                )
-
-                Spacer(
-                    modifier =
-                        Modifier.height(17.dp)
-                )
-            }
-
-
-            item {
-
-                if (
-                    searchText.isNotBlank() &&
-                    filteredRecentUpdates.isEmpty() &&
-                    filteredViewedUpdates.isEmpty()
-                ) {
-
-                    Column(
-
+                    val latestMyUpdate = myUpdates.firstOrNull()
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(
-                                top = 40.dp
-                            ),
-
-                        horizontalAlignment =
-                            Alignment.CenterHorizontally
+                            .clickable {
+                                if (latestMyUpdate != null) {
+                                    selectedStatusForViewing = latestMyUpdate
+                                } else {
+                                    imagePickerLauncher.launch("image/*")
+                                }
+                            },
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Box(contentAlignment = Alignment.BottomEnd) {
+                            if (latestMyUpdate?.mediaUrl?.isNotBlank() == true) {
+                                Image(
+                                    painter = rememberAsyncImagePainter(model = latestMyUpdate.mediaUrl),
+                                    contentDescription = "My status",
+                                    modifier = Modifier
+                                        .size(60.dp)
+                                        .clip(CircleShape)
+                                        .border(2.5.dp, ConnectaTeal, CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Image(
+                                    painter = painterResource(id = R.drawable.nodp),
+                                    contentDescription = "My status",
+                                    modifier = Modifier
+                                        .size(60.dp)
+                                        .clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
 
+                            Box(
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .clip(CircleShape)
+                                    .background(ConnectaTeal)
+                                    .clickable { imagePickerLauncher.launch("image/*") },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Add",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(15.dp))
+
+                        Column {
+                            Text(
+                                text = "My status",
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = ConnectaDarkText
+                            )
+                            Spacer(modifier = Modifier.size(3.dp))
+                            Text(
+                                text = if (latestMyUpdate != null) formatTimestamp(latestMyUpdate.timestamp) else "Tap to add status update",
+                                fontSize = 14.sp,
+                                color = ConnectaSecondaryText
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(26.dp))
+                }
+
+                // Recent updates header
+                if (filteredRecent.isNotEmpty()) {
+                    Text(
+                        text = "Recent updates",
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = ConnectaSecondaryText
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                }
+            }
+
+            // Recent Updates items
+            items(filteredRecent) { update ->
+                RealStatusItem(
+                    name = update.userName,
+                    time = formatTimestamp(update.timestamp),
+                    imageUrl = update.mediaUrl,
+                    viewed = false,
+                    onClick = { selectedStatusForViewing = update }
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // Viewed updates header
+            item {
+                if (filteredViewed.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "Viewed updates",
+                        fontSize = 19.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = ConnectaSecondaryText
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                }
+            }
+
+            // Viewed Updates items
+            items(filteredViewed) { update ->
+                RealStatusItem(
+                    name = update.userName,
+                    time = formatTimestamp(update.timestamp),
+                    imageUrl = update.mediaUrl,
+                    viewed = true,
+                    onClick = { selectedStatusForViewing = update }
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // Empty State
+            item {
+                if (updates.isEmpty() && searchText.isBlank()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 40.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.update_icon),
+                                contentDescription = null,
+                                modifier = Modifier.size(54.dp),
+                                tint = ConnectaSecondaryText.copy(alpha = 0.4f)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "No recent updates from contacts",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = ConnectaSecondaryText
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Status updates disappear after 24 hours.",
+                                fontSize = 13.sp,
+                                color = ConnectaSecondaryText.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Status Viewer Dialog
+    if (selectedStatusForViewing != null) {
+        val st = selectedStatusForViewing!!
+        AlertDialog(
+            onDismissRequest = { selectedStatusForViewing = null },
+            confirmButton = {
+                TextButton(onClick = { selectedStatusForViewing = null }) {
+                    Text("Close", color = ConnectaTeal, fontWeight = FontWeight.Bold)
+                }
+            },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = st.userName,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = ConnectaDarkText
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(
+                        text = formatTimestamp(st.timestamp),
+                        fontSize = 12.sp,
+                        color = ConnectaSecondaryText
+                    )
+                }
+            },
+            text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    if (st.mediaUrl.isNotBlank()) {
+                        Image(
+                            painter = rememberAsyncImagePainter(model = st.mediaUrl),
+                            contentDescription = "Status Image",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(260.dp)
+                                .clip(RoundedCornerShape(12.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+                    if (st.caption.isNotBlank()) {
                         Text(
-
-                            text =
-                                "No updates found",
-
-                            fontSize = 17.sp,
-
-                            color =
-                                ConnectaSecondaryText
+                            text = st.caption,
+                            fontSize = 15.sp,
+                            color = ConnectaDarkText,
+                            textAlign = TextAlign.Center
                         )
                     }
                 }
-
-                Spacer(
-                    modifier =
-                        Modifier.height(40.dp)
-                )
             }
-        }
+        )
     }
-}
 
+    // Create Status Dialog
+    if (showCreateDialog) {
+        var captionText by remember { mutableStateOf("") }
 
+        AlertDialog(
+            onDismissRequest = {
+                if (!isSubmitting) {
+                    showCreateDialog = false
+                    selectedImageUri = null
+                }
+            },
+            title = { Text("Add Status Update", fontWeight = FontWeight.Bold, color = ConnectaDarkText) },
+            text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    if (selectedImageUri != null) {
+                        Image(
+                            painter = rememberAsyncImagePainter(model = selectedImageUri),
+                            contentDescription = "Selected Photo",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(180.dp)
+                                .clip(RoundedCornerShape(8.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
 
-@Composable
-fun UpdateBottomBar(
-    onChatsClick: () -> Unit,
-    onPostClick: () -> Unit,
-    onCallsClick: () -> Unit
-) {
-
-    Row(
-
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(72.dp)
-            .background(Color.White),
-
-        horizontalArrangement =
-            Arrangement.SpaceAround,
-
-        verticalAlignment =
-            Alignment.CenterVertically
-    ) {
-
-        BottomItem(
-
-            icon =
-                R.drawable.chat_icon,
-
-            label =
-                "Chats",
-
-            selected =
-                false,
-
-            onClick =
-                onChatsClick
-        )
-
-        BottomItem(
-
-            icon =
-                R.drawable.update_icon,
-
-            label =
-                "Updates",
-
-            selected =
-                true,
-
-            onClick = {}
-        )
-
-        BottomItem(
-
-            icon =
-                R.drawable.communities_icon,
-
-            label =
-                "Post",
-
-            selected =
-                false,
-
-            onClick =
-                onPostClick
-
-        )
-
-        BottomItem(
-
-            icon =
-                R.drawable.telephone,
-
-            label =
-                "Calls",
-
-            selected =
-                false,
-
-            onClick =
-                onCallsClick
+                    OutlinedTextField(
+                        value = captionText,
+                        onValueChange = { captionText = it },
+                        label = { Text("Add a caption...") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.createStatus(
+                            caption = captionText.trim(),
+                            mediaUri = selectedImageUri,
+                            onSuccess = {
+                                showCreateDialog = false
+                                selectedImageUri = null
+                                Toast.makeText(context, "Status updated!", Toast.LENGTH_SHORT).show()
+                            },
+                            onError = { err ->
+                                Toast.makeText(context, err, Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    },
+                    enabled = !isSubmitting,
+                    colors = ButtonDefaults.buttonColors(containerColor = ConnectaTeal)
+                ) {
+                    if (isSubmitting) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
+                    } else {
+                        Text("Post")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showCreateDialog = false
+                        selectedImageUri = null
+                    },
+                    enabled = !isSubmitting
+                ) {
+                    Text("Cancel", color = ConnectaSecondaryText)
+                }
+            }
         )
     }
 }
 
-
-
-
 @Composable
-fun BottomItem(
-    icon: Int,
-    label: String,
-    selected: Boolean,
+fun RealStatusItem(
+    name: String,
+    time: String,
+    imageUrl: String,
+    viewed: Boolean,
     onClick: () -> Unit
 ) {
-
-    val iconColor =
-        if (selected) {
-
-            ConnectaTeal
-
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (imageUrl.isNotBlank()) {
+            Image(
+                painter = rememberAsyncImagePainter(model = imageUrl),
+                contentDescription = name,
+                modifier = Modifier
+                    .size(60.dp)
+                    .clip(CircleShape)
+                    .border(
+                        width = 3.dp,
+                        color = if (viewed) ConnectaSecondaryText else ConnectaTeal,
+                        shape = CircleShape
+                    ),
+                contentScale = ContentScale.Crop
+            )
         } else {
-
-            ConnectaSecondaryText
+            Image(
+                painter = painterResource(id = R.drawable.nodp),
+                contentDescription = name,
+                modifier = Modifier
+                    .size(60.dp)
+                    .clip(CircleShape)
+                    .border(
+                        width = 3.dp,
+                        color = if (viewed) ConnectaSecondaryText else ConnectaTeal,
+                        shape = CircleShape
+                    ),
+                contentScale = ContentScale.Crop
+            )
         }
 
-    Column(
+        Spacer(modifier = Modifier.width(15.dp))
 
-        modifier = Modifier
-            .clickable {
-                onClick()
-            },
+        Column {
+            Text(
+                text = name,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = ConnectaDarkText
+            )
+            Spacer(modifier = Modifier.size(3.dp))
+            Text(
+                text = time,
+                fontSize = 14.sp,
+                color = ConnectaSecondaryText
+            )
+        }
+    }
+}
 
-        horizontalAlignment =
-            Alignment.CenterHorizontally,
-
-        verticalArrangement =
-            Arrangement.Center
-    ) {
-
-        Icon(
-
-            painter =
-                painterResource(
-                    id = icon
-                ),
-
-            contentDescription =
-                label,
-
-            modifier =
-                Modifier.size(25.dp),
-
-            tint =
-                iconColor
-        )
-
-        Spacer(
-            modifier =
-                Modifier.height(4.dp)
-        )
-
-        Text(
-
-            text =
-                label,
-
-            fontSize =
-                12.sp,
-
-            fontWeight =
-                if (selected) {
-
-                    FontWeight.SemiBold
-
-                } else {
-
-                    FontWeight.Normal
-                },
-
-            color =
-                iconColor
-        )
+private fun formatTimestamp(timestamp: Long): String {
+    if (timestamp <= 0) return ""
+    val now = System.currentTimeMillis()
+    val diff = now - timestamp
+    return when {
+        diff < 60 * 1000 -> "Just now"
+        diff < 60 * 60 * 1000 -> "${diff / (60 * 1000)} minutes ago"
+        diff < 24 * 60 * 60 * 1000 -> {
+            val sdf = SimpleDateFormat("h:mm a", Locale.getDefault())
+            "Today, ${sdf.format(Date(timestamp))}"
+        }
+        else -> {
+            val sdf = SimpleDateFormat("MMM d, h:mm a", Locale.getDefault())
+            sdf.format(Date(timestamp))
+        }
     }
 }

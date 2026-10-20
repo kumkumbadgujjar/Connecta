@@ -31,12 +31,17 @@ import kotlinx.coroutines.delay
 fun SplashScreen(navHostController: NavHostController) {
 
     LaunchedEffect(Unit) {
+        delay(1200)
 
-        delay(1000)
-
-        navHostController.navigate(Routes.WelcomeScreen){
-
-            popUpTo<Routes.SplashScreen>{inclusive = true}
+        val currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+        if (currentUser != null) {
+            navHostController.navigate(Routes.HomeScreen) {
+                popUpTo<Routes.SplashScreen> { inclusive = true }
+            }
+        } else {
+            navHostController.navigate(Routes.WelcomeScreen) {
+                popUpTo<Routes.SplashScreen> { inclusive = true }
+            }
         }
     }
 

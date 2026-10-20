@@ -11,4 +11,6 @@ data class PhoneAuthUser(
     val name: String = "",
     val status: String = "",
     val profileImage: String? = null,
+    val createdAt: Long = 0L,
+    val updatedAt: Long = 0L
 )

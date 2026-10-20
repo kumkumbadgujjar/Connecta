@@ -1,43 +1,25 @@
 package com.example.connecta.presentation.userregistrationscreen
 
 import android.app.Activity
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.LocalActivity
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -47,6 +29,8 @@ import com.example.connecta.presentation.viewmodel.AuthState
 import com.example.connecta.presentation.viewmodel.PhoneAuthViewModel
 
 private val ConnectaTeal = Color(0xFF06B6D4)
+private val ConnectaDarkText = Color(0xFF102A32)
+private val ConnectaSecondaryText = Color(0xFF607D86)
 
 @Composable
 fun UserRegistrationScreen(
@@ -54,6 +38,7 @@ fun UserRegistrationScreen(
     phoneAuthViewModel: PhoneAuthViewModel = hiltViewModel()
 ) {
     val authState by phoneAuthViewModel.authState.collectAsState()
+    val resendCountdown by phoneAuthViewModel.resendCountdown.collectAsState()
     val context = LocalContext.current
     val activity = LocalActivity.current as? Activity
 
@@ -68,210 +53,411 @@ fun UserRegistrationScreen(
         "USA" to "+1",
         "China" to "+86",
         "Pakistan" to "+92",
-        "Canada" to "+1"
+        "Canada" to "+1",
+        "United Kingdom" to "+44",
+        "Australia" to "+61",
+        "UAE" to "+971"
     )
 
-    // Derive verification ID directly from AuthState if present
-    val verificationId = (authState as? AuthState.CodeSent)?.verificationId
+    // Check if code was sent
+    val isCodeSent = authState is AuthState.CodeSent
+
+    LaunchedEffect(authState) {
+        if (authState is AuthState.Success) {
+            val user = (authState as AuthState.Success).user
+            // If user has already configured their profile, go to Home, else go to UserProfileScreen
+            if (user.name.isNotBlank()) {
+                navController.navigate(Routes.HomeScreen) {
+                    popUpTo<Routes.UserRegistrationScreen> { inclusive = true }
+                }
+            } else {
+                navController.navigate(Routes.UserProfileScreen) {
+                    popUpTo<Routes.UserRegistrationScreen> { inclusive = true }
+                }
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(Color.White)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "Enter your phone number",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = ConnectaTeal
-        )
+        // Top Back Row
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (isCodeSent) {
+                IconButton(onClick = { phoneAuthViewModel.resetAuthState() }) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Back",
+                        tint = ConnectaDarkText
+                    )
+                }
+            } else {
+                Spacer(modifier = Modifier.width(48.dp))
+            }
 
-        Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = if (isCodeSent) "Verify Phone" else "Register Phone",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = ConnectaDarkText,
+                modifier = Modifier.weight(1f),
+                textAlign = TextAlign.Center
+            )
 
-        Row {
-            Text(text = "Connecta will need to verify your phone number")
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(text = "What's", color = ConnectaTeal)
+            Spacer(modifier = Modifier.width(48.dp))
         }
-
-        Text(text = "my number?", color = ConnectaTeal)
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Box(
-            modifier = Modifier.fillMaxWidth(),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                TextButton(
-                    onClick = { expanded = !expanded },
-                    modifier = Modifier.width(230.dp)
-                ) {
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text = selectedCountry,
-                            modifier = Modifier.align(Alignment.Center),
-                            fontSize = 16.sp,
-                            color = Color.Black
-                        )
-                        Icon(
-                            imageVector = Icons.Default.ArrowDropDown,
-                            contentDescription = "Select country",
-                            modifier = Modifier.align(Alignment.CenterEnd)
-                        )
-                    }
-                }
+        if (!isCodeSent) {
+            // ============================================
+            // PHONE NUMBER ENTRY SECTION
+            // ============================================
+            Text(
+                text = "Enter your phone number",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = ConnectaTeal
+            )
 
-                HorizontalDivider(
-                    modifier = Modifier.width(230.dp),
-                    thickness = 2.dp,
-                    color = ConnectaTeal
-                )
+            Spacer(modifier = Modifier.height(12.dp))
 
-                DropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false }
-                ) {
-                    countryCodes.keys.forEach { countryName ->
-                        DropdownMenuItem(
-                            text = { Text(text = countryName) },
-                            onClick = {
-                                selectedCountry = countryName
-                                countryCode = countryCodes[countryName] ?: ""
-                                expanded = false
-                            }
-                        )
-                    }
-                }
-            }
-        }
+            Text(
+                text = "Connecta will send an SMS message to verify your phone number. Carrier SMS rates may apply.",
+                fontSize = 14.sp,
+                color = ConnectaSecondaryText,
+                textAlign = TextAlign.Center,
+                lineHeight = 20.sp,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
 
-        when (authState) {
-            is AuthState.Ideal, is AuthState.Loading, is AuthState.CodeSent -> {
-                if (verificationId == null) {
-                    // --- Phone Input Section ---
-                    Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
+            // Country Selector Dropdown
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    TextButton(
+                        onClick = { expanded = !expanded },
+                        modifier = Modifier.width(260.dp)
                     ) {
-                        TextField(
-                            value = countryCode,
-                            onValueChange = { countryCode = it },
-                            modifier = Modifier.width(70.dp),
-                            singleLine = true,
-                            colors = TextFieldDefaults.colors(
-                                focusedTextColor = Color.Black,
-                                unfocusedTextColor = Color.Black,
-                                focusedIndicatorColor = ConnectaTeal
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                text = selectedCountry,
+                                modifier = Modifier.align(Alignment.Center),
+                                fontSize = 16.sp,
+                                color = ConnectaDarkText,
+                                fontWeight = FontWeight.Medium
                             )
-                        )
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        TextField(
-                            value = phoneNumber,
-                            onValueChange = { phoneNumber = it },
-                            placeholder = { Text(text = "Phone Number") },
-                            singleLine = true,
-                            modifier = Modifier.weight(1f),
-                            colors = TextFieldDefaults.colors(
-                                focusedTextColor = Color.Black,
-                                unfocusedTextColor = Color.Black,
-                                focusedIndicatorColor = ConnectaTeal
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = "Select country",
+                                modifier = Modifier.align(Alignment.CenterEnd),
+                                tint = ConnectaTeal
                             )
-                        )
+                        }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Button(
-                        onClick = {
-                            if (phoneNumber.isNotEmpty() && activity != null) {
-                                val fullPhoneNumber = "$countryCode$phoneNumber"
-                                phoneAuthViewModel.sendVerificationCode(fullPhoneNumber, activity)
-                            } else {
-                                Toast.makeText(
-                                    context,
-                                    "Please enter your valid Phone Number",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        },
-                        shape = RoundedCornerShape(6.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = ConnectaTeal)
-                    ) {
-                        Text(text = "Send OTP")
-                    }
-
-                    if (authState is AuthState.Loading) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        CircularProgressIndicator(color = ConnectaTeal)
-                    }
-                } else {
-                    // --- OTP Input Section ---
-                    Spacer(modifier = Modifier.height(48.dp))
-
-                    Text(
-                        text = "Enter the OTP sent to your phone number",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
+                    HorizontalDivider(
+                        modifier = Modifier.width(260.dp),
+                        thickness = 2.dp,
                         color = ConnectaTeal
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    TextField(
-                        value = otp,
-                        onValueChange = { otp = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        colors = TextFieldDefaults.colors(
-                            focusedTextColor = Color.Black,
-                            unfocusedTextColor = Color.Black,
-                            focusedIndicatorColor = ConnectaTeal
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(32.dp))
-
-                    Button(
-                        onClick = {
-                            if (otp.isNotEmpty()) {
-                                phoneAuthViewModel.verifyCode(otp, context)
-                            } else {
-                                Toast.makeText(context, "Please enter the OTP", Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        shape = RoundedCornerShape(6.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = ConnectaTeal)
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
                     ) {
-                        Text(text = "Verify OTP")
-                    }
-
-                    if (authState is AuthState.Loading) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        CircularProgressIndicator(color = ConnectaTeal)
+                        countryCodes.keys.forEach { countryName ->
+                            DropdownMenuItem(
+                                text = {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(text = countryName, color = ConnectaDarkText)
+                                        Text(
+                                            text = countryCodes[countryName] ?: "",
+                                            color = ConnectaSecondaryText,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    selectedCountry = countryName
+                                    countryCode = countryCodes[countryName] ?: "+91"
+                                    expanded = false
+                                }
+                            )
+                        }
                     }
                 }
             }
 
-            is AuthState.Success -> {
-                Log.d("PhoneAuth", "Login Successful")
-                phoneAuthViewModel.resetAuthState()
-                navController.navigate(Routes.UserProfileScreen) {
-                    popUpTo<Routes.UserRegistrationScreen> {
-                        inclusive = true
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Phone Input Row
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) {
+                TextField(
+                    value = countryCode,
+                    onValueChange = { countryCode = it },
+                    modifier = Modifier.width(80.dp),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    colors = TextFieldDefaults.colors(
+                        focusedTextColor = ConnectaDarkText,
+                        unfocusedTextColor = ConnectaDarkText,
+                        focusedIndicatorColor = ConnectaTeal,
+                        unfocusedIndicatorColor = ConnectaSecondaryText,
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent
+                    )
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                TextField(
+                    value = phoneNumber,
+                    onValueChange = { phoneNumber = it.filter { ch -> ch.isDigit() } },
+                    placeholder = { Text(text = "Phone Number", color = ConnectaSecondaryText) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    modifier = Modifier.weight(1f),
+                    colors = TextFieldDefaults.colors(
+                        focusedTextColor = ConnectaDarkText,
+                        unfocusedTextColor = ConnectaDarkText,
+                        focusedIndicatorColor = ConnectaTeal,
+                        unfocusedIndicatorColor = ConnectaSecondaryText,
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent
+                    )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            val isLoading = authState is AuthState.Loading
+
+            Button(
+                onClick = {
+                    if (phoneNumber.trim().length >= 6 && activity != null) {
+                        val fullPhoneNumber = "${countryCode.trim()}${phoneNumber.trim()}"
+                        phoneAuthViewModel.sendVerificationCode(fullPhoneNumber, activity)
+                    } else {
+                        Toast.makeText(
+                            context,
+                            "Please enter a valid phone number",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
+                },
+                enabled = !isLoading && phoneNumber.isNotBlank(),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
+                    .padding(horizontal = 24.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = ConnectaTeal,
+                    disabledContainerColor = ConnectaTeal.copy(alpha = 0.5f)
+                )
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.5.dp
+                    )
+                } else {
+                    Text(
+                        text = "Send Verification Code",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
                 }
             }
 
-            is AuthState.Error -> {
-                val errorMessage = (authState as AuthState.Error).message
-                Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
-                phoneAuthViewModel.resetAuthState()
+        } else {
+            // ============================================
+            // REAL OTP VERIFICATION SECTION
+            // ============================================
+            Text(
+                text = "Enter Verification Code",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = ConnectaTeal
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                text = "We sent an SMS with a 6-digit verification code to $countryCode $phoneNumber",
+                fontSize = 14.sp,
+                color = ConnectaSecondaryText,
+                textAlign = TextAlign.Center,
+                lineHeight = 20.sp,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Clean 6-digit OTP Input Field
+            TextField(
+                value = otp,
+                onValueChange = {
+                    if (it.length <= 6) {
+                        otp = it.filter { ch -> ch.isDigit() }
+                    }
+                },
+                placeholder = {
+                    Text(
+                        text = "• • • • • •",
+                        color = ConnectaSecondaryText,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        fontSize = 24.sp
+                    )
+                },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                modifier = Modifier
+                    .width(260.dp)
+                    .height(64.dp),
+                textStyle = LocalTextStyle.current.copy(
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    color = ConnectaDarkText,
+                    letterSpacing = 8.sp
+                ),
+                colors = TextFieldDefaults.colors(
+                    focusedTextColor = ConnectaDarkText,
+                    unfocusedTextColor = ConnectaDarkText,
+                    focusedIndicatorColor = ConnectaTeal,
+                    unfocusedIndicatorColor = ConnectaTeal.copy(alpha = 0.6f),
+                    focusedContainerColor = Color(0xFFF1F5F6),
+                    unfocusedContainerColor = Color(0xFFF1F5F6)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            )
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            val isLoading = authState is AuthState.Loading
+
+            Button(
+                onClick = {
+                    if (otp.length == 6) {
+                        phoneAuthViewModel.verifyCode(otp.trim())
+                    } else {
+                        Toast.makeText(context, "Please enter the complete 6-digit code", Toast.LENGTH_SHORT).show()
+                    }
+                },
+                enabled = !isLoading && otp.length == 6,
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
+                    .padding(horizontal = 24.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = ConnectaTeal,
+                    disabledContainerColor = ConnectaTeal.copy(alpha = 0.5f)
+                )
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.5.dp
+                    )
+                } else {
+                    Text(
+                        text = "Verify & Continue",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Resend Code with Countdown Cooldown
+            if (resendCountdown > 0) {
+                Text(
+                    text = "Resend SMS in $resendCountdown seconds",
+                    fontSize = 14.sp,
+                    color = ConnectaSecondaryText,
+                    fontWeight = FontWeight.Medium
+                )
+            } else {
+                TextButton(
+                    onClick = {
+                        if (activity != null) {
+                            phoneAuthViewModel.resendVerificationCode(activity)
+                        }
+                    }
+                ) {
+                    Text(
+                        text = "Didn't receive code? Resend SMS",
+                        color = ConnectaTeal,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            TextButton(
+                onClick = {
+                    phoneAuthViewModel.resetAuthState()
+                    otp = ""
+                }
+            ) {
+                Text(
+                    text = "Wrong number? Change phone number",
+                    color = ConnectaSecondaryText,
+                    fontSize = 13.sp
+                )
+            }
+        }
+
+        // Error message display
+        if (authState is AuthState.Error) {
+            val errorMessage = (authState as AuthState.Error).message
+            Spacer(modifier = Modifier.height(16.dp))
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) {
+                Text(
+                    text = errorMessage,
+                    color = Color(0xFFC62828),
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(12.dp),
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }

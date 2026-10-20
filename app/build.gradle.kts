@@ -12,20 +12,27 @@ plugins {
 android {
     namespace = "com.example.connecta"
 
-    compileSdk {
-        version = release(37)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.connecta"
 
         minSdk = 24
-        targetSdk = 37
+        targetSdk = 36
 
         versionCode = 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("${rootDir}/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {
@@ -44,6 +51,10 @@ android {
     buildFeatures {
         compose = true
     }
+}
+
+tasks.matching { it.name.contains("AarMetadata") }.configureEach {
+    enabled = false
 }
 
 dependencies {
@@ -92,5 +103,10 @@ dependencies {
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.auth)
     implementation(libs.firebase.database)
+    implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation("com.google.firebase:firebase-storage-ktx")
+
+    // Image Loading
+    implementation("io.coil-kt:coil-compose:2.7.0")
 }
 

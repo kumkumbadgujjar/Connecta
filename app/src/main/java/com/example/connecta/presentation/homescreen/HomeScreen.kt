@@ -1,18 +1,10 @@
 package com.example.connecta.presentation.homescreen
 
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -20,206 +12,95 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import coil.compose.rememberAsyncImagePainter
 import com.example.connecta.R
+import com.example.connecta.models.Conversation
 import com.example.connecta.presentation.bottomnavigation.BottomNavigationBar
+import com.example.connecta.presentation.viewmodel.ChatViewModel
 import kotlinx.coroutines.delay
+import java.text.SimpleDateFormat
+import java.util.*
 
 private val ConnectaTeal = Color(0xFF06B6D4)
 private val ConnectaDarkText = Color(0xFF102A32)
 private val ConnectaSecondaryText = Color(0xFF607D86)
 
-data class ChatItem(
-    val name: String,
-    val message: String,
-    val time: String,
-    val image: Int,
-    val unreadCount: Int = 0
-)
-
-@Preview(showSystemUi = true, showBackground = true)
 @Composable
 fun HomeScreen(
-    onChatClick: (ChatItem) -> Unit = {},
-    onNewChatClick: () -> Unit = {},
+    onChatClick: (conversationId: String, partnerName: String, partnerImage: String, partnerPhone: String) -> Unit = { _, _, _, _ -> },
     onCameraClick: () -> Unit = {},
-    onSearchClick: () -> Unit = {},
     onMenuClick: () -> Unit = {},
     onUpdatesClick: () -> Unit = {},
     onPostsClick: () -> Unit = {},
-    onCallsClick: () -> Unit = {}
+    onCallsClick: () -> Unit = {},
+    viewModel: ChatViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
+    val conversations by viewModel.conversations.collectAsState()
+    val currentUserId = viewModel.currentUserId ?: ""
 
+    var isSearching by remember { mutableStateOf(false) }
+    var searchText by remember { mutableStateOf("") }
+    var showNewChatDialog by remember { mutableStateOf(false) }
 
-    var isSearching by remember {
-        mutableStateOf(false)
-    }
-
-    var searchText by remember {
-        mutableStateOf("")
-    }
-
-    val focusRequester = remember {
-        FocusRequester()
-    }
-
+    val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
     LaunchedEffect(isSearching) {
-
         if (isSearching) {
-
             delay(200)
-
             focusRequester.requestFocus()
-
             keyboardController?.show()
-
         } else {
-
             keyboardController?.hide()
         }
     }
 
-
-
-    val chatData = listOf(
-
-        ChatItem(
-            image = R.drawable.nodp,
-            name = "College",
-            time = "10:01 AM",
-            message = "Hii"
-        ),
-
-        ChatItem(
-            image = R.drawable.nodp,
-            name = "School",
-            time = "10:00 AM",
-            message = "Hii"
-        ),
-
-        ChatItem(
-            image = R.drawable.nodp,
-            name = "Him",
-            time = "10:30 PM",
-            message = "Hii"
-        ),
-
-        ChatItem(
-            image = R.drawable.nodp,
-            name = "Her",
-            time = "10:40 AM",
-            message = "Hii"
-        ),
-
-        ChatItem(
-            image = R.drawable.nodp,
-            name = "It",
-            time = "10:07 AM",
-            message = "Hii"
-        ),
-
-        ChatItem(
-            image = R.drawable.nodp,
-            name = "They",
-            time = "12:00 AM",
-            message = "Hii"
-        ),
-
-        ChatItem(
-            image = R.drawable.nodp,
-            name = "You",
-            time = "11:00 AM",
-            message = "Hii"
-        ),
-
-        ChatItem(
-            image = R.drawable.nodp,
-            name = "WE",
-            time = "10:30 AM",
-            message = "Hii"
-        ),
-
-        ChatItem(
-            image = R.drawable.nodp,
-            name = "MOM",
-            time = "10:00 PM",
-            message = "Hii"
-        )
-    )
-
-
-    val filteredChats = if (searchText.isBlank()) {
-
-        chatData
-
+    val filteredConversations = if (searchText.isBlank()) {
+        conversations
     } else {
-
-        chatData.filter { chat ->
-
-            chat.name.contains(
-                searchText,
-                ignoreCase = true
-            ) ||
-                    chat.message.contains(
-                        searchText,
-                        ignoreCase = true
-                    )
+        conversations.filter { conv ->
+            val partnerName = conv.participantNames.filterKeys { it != currentUserId }.values.firstOrNull() ?: ""
+            partnerName.contains(searchText, ignoreCase = true) || conv.lastMessage.contains(searchText, ignoreCase = true)
         }
     }
 
-
     Scaffold(
-
         floatingActionButton = {
-
             FloatingActionButton(
-                onClick = onNewChatClick,
+                onClick = { showNewChatDialog = true },
                 containerColor = ConnectaTeal,
                 contentColor = Color.White,
                 shape = RoundedCornerShape(18.dp)
             ) {
-
                 Icon(
-                    painter = painterResource(
-                        id = R.drawable.chat_icon
-                    ),
+                    painter = painterResource(id = R.drawable.chat_icon),
                     contentDescription = "New Chat",
                     modifier = Modifier.size(28.dp)
                 )
             }
         },
-
         bottomBar = {
-
             BottomNavigationBar(
                 selectedItem = 0,
                 onChatsClick = {},
@@ -228,75 +109,39 @@ fun HomeScreen(
                 onCallsClick = onCallsClick
             )
         }
-
     ) { paddingValues ->
-
         Column(
-
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.White)
                 .padding(paddingValues)
         ) {
-
-
-
+            // Top Bar
             if (isSearching) {
-
-
-
                 Row(
-
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(70.dp)
-                        .padding(
-                            horizontal = 16.dp,
-                            vertical = 8.dp
-                        ),
-
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-
                     TextField(
-
                         value = searchText,
-
-                        onValueChange = { text ->
-
-                            searchText = text
-                        },
-
+                        onValueChange = { searchText = it },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .focusRequester(
-                                focusRequester
-                            ),
-
+                            .focusRequester(focusRequester),
                         singleLine = true,
-
-                        placeholder = {
-
-                            Text(
-                                text = "Search"
-                            )
-                        },
-
+                        placeholder = { Text(text = "Search chats") },
                         leadingIcon = {
-
                             Icon(
-
-                                painter = painterResource(
-                                    id = R.drawable.search
-                                ),
+                                painter = painterResource(id = R.drawable.search),
                                 contentDescription = "Search",
                                 modifier = Modifier.size(24.dp),
                                 tint = ConnectaTeal
                             )
                         },
-
                         trailingIcon = {
-
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "Close search",
@@ -306,44 +151,25 @@ fun HomeScreen(
                                         searchText = ""
                                         isSearching = false
                                     },
-
                                 tint = ConnectaSecondaryText
                             )
                         },
-
-                        keyboardOptions = KeyboardOptions(
-                            imeAction = ImeAction.Search
-                        ),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         shape = RoundedCornerShape(14.dp),
                         colors = TextFieldDefaults.colors(
-
-                            focusedContainerColor =
-                                Color(0xFFF1F5F6),
-                            unfocusedContainerColor =
-                                Color(0xFFF1F5F6),
-                            disabledContainerColor =
-                                Color(0xFFF1F5F6),
-                            focusedIndicatorColor =
-                                Color.Transparent,
-                            unfocusedIndicatorColor =
-                                Color.Transparent,
-                            disabledIndicatorColor =
-                                Color.Transparent
+                            focusedContainerColor = Color(0xFFF1F5F6),
+                            unfocusedContainerColor = Color(0xFFF1F5F6),
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent
                         )
                     )
                 }
-
             } else {
-
-
-
                 Row(
-
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(70.dp)
                         .padding(horizontal = 20.dp),
-
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
@@ -354,192 +180,265 @@ fun HomeScreen(
                         color = ConnectaTeal
                     )
 
-
-
                     Icon(
-
-                        painter = painterResource(
-                            id = R.drawable.camera
-                        ),
-
+                        painter = painterResource(id = R.drawable.camera),
                         contentDescription = "Camera",
-
                         modifier = Modifier
                             .size(32.dp)
-                            .clickable {
-
-                                onCameraClick()
-                            }
+                            .clickable { onCameraClick() }
                     )
 
-                    Spacer(
-                        modifier = Modifier.width(20.dp)
-                    )
-
-
+                    Spacer(modifier = Modifier.width(20.dp))
 
                     Icon(
-
-                        painter = painterResource(
-                            id = R.drawable.search
-                        ),
-
+                        painter = painterResource(id = R.drawable.search),
                         contentDescription = "Search",
-
                         modifier = Modifier
                             .size(26.dp)
-                            .clickable {
-
-
-                                isSearching = true
-                            }
+                            .clickable { isSearching = true }
                     )
 
-                    Spacer(
-                        modifier = Modifier.width(20.dp)
-                    )
-
-
+                    Spacer(modifier = Modifier.width(20.dp))
 
                     Icon(
-
-                        painter = painterResource(
-                            id = R.drawable.menu
-                        ),
-
+                        painter = painterResource(id = R.drawable.menu),
                         contentDescription = "Menu",
-
                         modifier = Modifier
                             .size(26.dp)
-                            .clickable {
-
-                                onMenuClick()
-                            }
+                            .clickable { onMenuClick() }
                     )
                 }
             }
 
-
-
-            LazyColumn(
-
-                modifier = Modifier
-                    .fillMaxSize()
-            ) {
-
-                items(filteredChats) { chat ->
-
-                    ChatRow(
-
-                        chat = chat,
-
-                        onClick = {
-
-                            onChatClick(chat)
-                        }
-                    )
+            // Real Conversations List
+            if (filteredConversations.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Image(
+                            painter = painterResource(id = R.drawable.chat_icon),
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            alpha = 0.35f
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = if (searchText.isBlank()) "No conversations yet" else "No matching chats found",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = ConnectaDarkText
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = if (searchText.isBlank()) "Tap the chat button below to start a new real conversation with any contact." else "Try searching for a different name.",
+                            fontSize = 14.sp,
+                            color = ConnectaSecondaryText,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 20.sp
+                        )
+                    }
                 }
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    items(filteredConversations) { conv ->
+                        val partnerName = conv.participantNames.filterKeys { it != currentUserId }.values.firstOrNull() ?: "Chat"
+                        val partnerImage = conv.participantImages.filterKeys { it != currentUserId }.values.firstOrNull() ?: ""
+                        val partnerPhone = conv.participantPhones.filterKeys { it != currentUserId }.values.firstOrNull() ?: ""
 
-                item {
+                        RealChatRow(
+                            name = partnerName.ifBlank { partnerPhone },
+                            lastMessage = conv.lastMessage,
+                            time = formatTimestamp(conv.lastMessageTime),
+                            imageUrl = partnerImage,
+                            unreadCount = conv.unreadCounts[currentUserId] ?: 0,
+                            onClick = {
+                                onChatClick(conv.id, partnerName.ifBlank { partnerPhone }, partnerImage, partnerPhone)
+                            }
+                        )
+                    }
 
-                    HorizontalDivider()
+                    item {
+                        HorizontalDivider(color = Color(0xFFF1F5F6))
+                    }
                 }
             }
         }
     }
+
+    // Dialog: Start a New Real Chat
+    if (showNewChatDialog) {
+        var newPhone by remember { mutableStateOf("") }
+        var newContactName by remember { mutableStateOf("") }
+
+        AlertDialog(
+            onDismissRequest = { showNewChatDialog = false },
+            title = {
+                Text(
+                    text = "New Conversation",
+                    fontWeight = FontWeight.Bold,
+                    color = ConnectaDarkText
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = "Enter the contact's name and phone number to start a real-time conversation:",
+                        fontSize = 14.sp,
+                        color = ConnectaSecondaryText
+                    )
+                    OutlinedTextField(
+                        value = newContactName,
+                        onValueChange = { newContactName = it },
+                        label = { Text("Contact Name") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = newPhone,
+                        onValueChange = { newPhone = it },
+                        label = { Text("Phone Number (with country code)") },
+                        placeholder = { Text("+91 9876543210") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (newPhone.trim().isNotBlank()) {
+                            val contactName = newContactName.trim().ifBlank { newPhone.trim() }
+                            viewModel.startNewConversation(
+                                partnerPhone = newPhone.trim(),
+                                partnerName = contactName,
+                                onSuccess = { convId ->
+                                    showNewChatDialog = false
+                                    onChatClick(convId, contactName, "", newPhone.trim())
+                                },
+                                onError = { err ->
+                                    Toast.makeText(context, err, Toast.LENGTH_SHORT).show()
+                                }
+                            )
+                        } else {
+                            Toast.makeText(context, "Please enter a phone number", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = ConnectaTeal)
+                ) {
+                    Text("Start Chat")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNewChatDialog = false }) {
+                    Text("Cancel", color = ConnectaSecondaryText)
+                }
+            }
+        )
+    }
 }
 
-
 @Composable
-fun ChatRow(
-    chat: ChatItem,
+fun RealChatRow(
+    name: String,
+    lastMessage: String,
+    time: String,
+    imageUrl: String,
+    unreadCount: Int,
     onClick: () -> Unit
 ) {
-
     Row(
-
         modifier = Modifier
             .fillMaxWidth()
-            .clickable {
-
-                onClick()
-            }
-            .padding(
-                horizontal = 20.dp,
-                vertical = 9.dp
-            ),
-
+            .clickable { onClick() }
+            .padding(horizontal = 20.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Image(
+        if (imageUrl.isNotBlank()) {
+            Image(
+                painter = rememberAsyncImagePainter(model = imageUrl),
+                contentDescription = name,
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Image(
+                painter = painterResource(id = R.drawable.nodp),
+                contentDescription = name,
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop
+            )
+        }
 
-            painter = painterResource(
-                id = chat.image
-            ),
+        Spacer(modifier = Modifier.width(15.dp))
 
-            contentDescription = chat.name,
-
-            modifier = Modifier
-                .size(58.dp)
-                .clip(CircleShape),
-
-            contentScale = ContentScale.Crop
-        )
-        Spacer(
-            modifier = Modifier.width(15.dp)
-        )
-
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = chat.name,
-                fontSize = 18.sp,
+                text = name,
+                fontSize = 17.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = ConnectaDarkText,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Spacer(
-                modifier = Modifier.height(4.dp)
-            )
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = chat.message,
-                fontSize = 15.sp,
+                text = lastMessage,
+                fontSize = 14.sp,
                 color = ConnectaSecondaryText,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
-        Column(
-            horizontalAlignment = Alignment.End
-        ) {
+
+        Column(horizontalAlignment = Alignment.End) {
             Text(
-                text = chat.time,
-                fontSize = 13.sp,
+                text = time,
+                fontSize = 12.sp,
                 color = ConnectaSecondaryText
             )
-            if (chat.unreadCount > 0) {
-                Spacer(
-                    modifier = Modifier.height(5.dp)
-                )
+            if (unreadCount > 0) {
+                Spacer(modifier = Modifier.height(5.dp))
                 Box(
                     modifier = Modifier
-                        .size(23.dp)
+                        .size(22.dp)
                         .clip(CircleShape)
                         .background(ConnectaTeal),
                     contentAlignment = Alignment.Center
                 ) {
-
                     Text(
-
-                        text = chat.unreadCount.toString(),
+                        text = unreadCount.toString(),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
                 }
             }
+        }
+    }
+}
+
+private fun formatTimestamp(timestamp: Long): String {
+    if (timestamp <= 0) return ""
+    val now = System.currentTimeMillis()
+    val diff = now - timestamp
+    return when {
+        diff < 60 * 1000 -> "Just now"
+        diff < 60 * 60 * 1000 -> "${diff / (60 * 1000)}m ago"
+        diff < 24 * 60 * 60 * 1000 -> {
+            val sdf = SimpleDateFormat("h:mm a", Locale.getDefault())
+            sdf.format(Date(timestamp))
+        }
+        else -> {
+            val sdf = SimpleDateFormat("MMM d", Locale.getDefault())
+            sdf.format(Date(timestamp))
         }
     }
 }

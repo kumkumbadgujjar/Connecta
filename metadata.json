@@ -1,0 +1,8 @@
+{
+  "name": "Connecta",
+  "description": "Simple, secure, connected messaging, updates, posts, and calling application.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
